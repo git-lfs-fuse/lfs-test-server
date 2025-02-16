@@ -227,7 +227,7 @@ func NewTestLock(id, path, user string) Lock {
 }
 
 func setupMeta() {
-	store, err := NewMetaStore("test-meta-store.db")
+	store, err := NewMetaStore(Config, "test-meta-store.db")
 	if err != nil {
 		fmt.Printf("error initializing test meta store: %s\n", err)
 		os.Exit(1)

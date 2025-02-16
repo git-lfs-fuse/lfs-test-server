@@ -17,7 +17,8 @@ import (
 // MetaStore implements a metadata storage. It stores user credentials and Meta information
 // for objects. The storage is handled by boltdb.
 type MetaStore struct {
-	db *bolt.DB
+	config *Configuration
+	db     *bolt.DB
 }
 
 var (
@@ -33,7 +34,7 @@ var (
 )
 
 // NewMetaStore creates a new MetaStore using the boltdb database at dbFile.
-func NewMetaStore(dbFile string) (*MetaStore, error) {
+func NewMetaStore(config *Configuration, dbFile string) (*MetaStore, error) {
 	db, err := bolt.Open(dbFile, 0600, &bolt.Options{Timeout: 1 * time.Second})
 	if err != nil {
 		return nil, err
@@ -55,7 +56,7 @@ func NewMetaStore(dbFile string) (*MetaStore, error) {
 		return nil
 	})
 
-	return &MetaStore{db: db}, nil
+	return &MetaStore{config: config, db: db}, nil
 }
 
 // Get retrieves the Meta information for an object given information in
@@ -422,7 +423,7 @@ func (s *MetaStore) AllLocks() ([]Lock, error) {
 func (s *MetaStore) Authenticate(user, password string) (string, bool) {
 	// check admin
 	if len(user) > 0 && len(password) > 0 {
-		if ok := checkBasicAuth(user, password, true); ok {
+		if ok := checkBasicAuth(s.config, user, password, true); ok {
 			return user, true
 		}
 	}
