@@ -1,4 +1,4 @@
-package main
+package lfstestserver
 
 import (
 	"crypto/rand"

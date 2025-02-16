@@ -1,4 +1,4 @@
-module github.com/git-lfs/lfs-test-server
+module github.com/git-lfs-fuse/lfs-test-server
 
 require (
 	github.com/boltdb/bolt v1.3.1
