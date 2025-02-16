@@ -559,7 +559,7 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	app := NewApp(testContentStore, testMetaStore)
+	app := NewApp(Config, testContentStore, testMetaStore)
 	lfsServer = httptest.NewServer(app)
 
 	logger = NewKVLogger(ioutil.Discard)
