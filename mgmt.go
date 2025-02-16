@@ -19,15 +19,15 @@ type pageData struct {
 }
 
 func (a *App) addMgmt(r *mux.Router) {
-	r.HandleFunc("/mgmt", basicAuth(a.indexHandler)).Methods("GET")
-	r.HandleFunc("/mgmt/objects", basicAuth(a.objectsHandler)).Methods("GET")
-	r.HandleFunc("/mgmt/raw/{oid}", basicAuth(a.objectsRawHandler)).Methods("GET")
-	r.HandleFunc("/mgmt/locks", basicAuth(a.locksHandler)).Methods("GET")
-	r.HandleFunc("/mgmt/users", basicAuth(a.usersHandler)).Methods("GET")
-	r.HandleFunc("/mgmt/add", basicAuth(a.addUserHandler)).Methods("POST")
-	r.HandleFunc("/mgmt/del", basicAuth(a.delUserHandler)).Methods("POST")
+	r.HandleFunc("/mgmt", basicAuth(a.config, a.indexHandler)).Methods("GET")
+	r.HandleFunc("/mgmt/objects", basicAuth(a.config, a.objectsHandler)).Methods("GET")
+	r.HandleFunc("/mgmt/raw/{oid}", basicAuth(a.config, a.objectsRawHandler)).Methods("GET")
+	r.HandleFunc("/mgmt/locks", basicAuth(a.config, a.locksHandler)).Methods("GET")
+	r.HandleFunc("/mgmt/users", basicAuth(a.config, a.usersHandler)).Methods("GET")
+	r.HandleFunc("/mgmt/add", basicAuth(a.config, a.addUserHandler)).Methods("POST")
+	r.HandleFunc("/mgmt/del", basicAuth(a.config, a.delUserHandler)).Methods("POST")
 
-	r.HandleFunc("/mgmt/css/{file}", basicAuth(cssHandler))
+	r.HandleFunc("/mgmt/css/{file}", basicAuth(a.config, cssHandler))
 }
 
 func cssHandler(w http.ResponseWriter, r *http.Request) {
@@ -44,27 +44,27 @@ func cssHandler(w http.ResponseWriter, r *http.Request) {
 	f.Close()
 }
 
-func checkBasicAuth(user string, pass string, ok bool) bool {
+func checkBasicAuth(config *Configuration, user string, pass string, ok bool) bool {
 	if !ok {
 		return false
 	}
 
-	if user != Config.AdminUser || pass != Config.AdminPass {
+	if user != config.AdminUser || pass != config.AdminPass {
 		return false
 	}
 	return true
 }
 
-func basicAuth(h http.HandlerFunc) http.HandlerFunc {
+func basicAuth(config *Configuration, h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if Config.AdminUser == "" || Config.AdminPass == "" {
+		if config.AdminUser == "" || config.AdminPass == "" {
 			writeStatus(w, r, 404)
 			return
 		}
 
 		user, pass, ok := r.BasicAuth()
 
-		ret := checkBasicAuth(user, pass, ok)
+		ret := checkBasicAuth(config, user, pass, ok)
 		if !ret {
 			w.Header().Set("WWW-Authenticate", "Basic realm=mgmt")
 			writeStatus(w, r, 401)
@@ -96,7 +96,7 @@ func (a *App) objectsHandler(w http.ResponseWriter, r *http.Request) {
 
 func (a *App) objectsRawHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	rv := &RequestVars{Oid: vars["oid"]}
+	rv := &RequestVars{config: a.config, Oid: vars["oid"]}
 
 	meta, err := a.metaStore.UnsafeGet(rv)
 	if err != nil {

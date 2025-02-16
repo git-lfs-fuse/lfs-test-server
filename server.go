@@ -19,6 +19,7 @@ import (
 // RequestVars contain variables from the HTTP request. Variables from routing, json body decoding, and
 // some headers are stored.
 type RequestVars struct {
+	config        *Configuration
 	Oid           string
 	Size          int64
 	User          string
@@ -131,7 +132,7 @@ func (v *RequestVars) internalLink(subpath string) string {
 
 	path += fmt.Sprintf("/%s/%s", subpath, v.Oid)
 
-	return fmt.Sprintf("%s%s", Config.ExtOrigin, path)
+	return fmt.Sprintf("%s%s", v.config.ExtOrigin, path)
 }
 
 func (v *RequestVars) tusLink() string {
@@ -145,7 +146,7 @@ func (v *RequestVars) tusLink() string {
 func (v *RequestVars) VerifyLink() string {
 	path := fmt.Sprintf("/verify/%s", v.Oid)
 
-	return fmt.Sprintf("%s%s", Config.ExtOrigin, path)
+	return fmt.Sprintf("%s%s", v.config.ExtOrigin, path)
 }
 
 // link provides a structure used to build a hypermedia representation of an HTTP link.
@@ -157,14 +158,15 @@ type link struct {
 
 // App links a Router, ContentStore, and MetaStore to provide the LFS server.
 type App struct {
+	config       *Configuration
 	router       *mux.Router
 	contentStore *ContentStore
 	metaStore    *MetaStore
 }
 
 // NewApp creates a new App using the ContentStore and MetaStore provided
-func NewApp(content *ContentStore, meta *MetaStore) *App {
-	app := &App{contentStore: content, metaStore: meta}
+func NewApp(config *Configuration, content *ContentStore, meta *MetaStore) *App {
+	app := &App{config: config, contentStore: content, metaStore: meta}
 
 	r := mux.NewRouter()
 
@@ -217,7 +219,7 @@ func (a *App) Serve(l net.Listener) error {
 
 // GetContentHandler gets the content from the content store
 func (a *App) GetContentHandler(w http.ResponseWriter, r *http.Request) {
-	rv := unpack(r)
+	rv := unpack(r, a.config)
 	meta, err := a.metaStore.Get(rv)
 	if err != nil {
 		writeStatus(w, r, 404)
@@ -251,7 +253,7 @@ func (a *App) GetContentHandler(w http.ResponseWriter, r *http.Request) {
 
 // GetMetaHandler retrieves metadata about the object
 func (a *App) GetMetaHandler(w http.ResponseWriter, r *http.Request) {
-	rv := unpack(r)
+	rv := unpack(r, a.config)
 	meta, err := a.metaStore.Get(rv)
 	if err != nil {
 		writeStatus(w, r, 404)
@@ -270,7 +272,7 @@ func (a *App) GetMetaHandler(w http.ResponseWriter, r *http.Request) {
 
 // PostHandler instructs the client how to upload data
 func (a *App) PostHandler(w http.ResponseWriter, r *http.Request) {
-	rv := unpack(r)
+	rv := unpack(r, a.config)
 	meta, err := a.metaStore.Put(rv)
 	if err != nil {
 		writeStatus(w, r, 404)
@@ -297,7 +299,7 @@ func (a *App) BatchHandler(w http.ResponseWriter, r *http.Request) {
 	var responseObjects []*Representation
 
 	var useTus bool
-	if bv.Operation == "upload" && Config.IsUsingTus() {
+	if bv.Operation == "upload" && a.config.IsUsingTus() {
 		for _, t := range bv.Transfers {
 			if t == "tus" {
 				useTus = true
@@ -348,7 +350,7 @@ func (a *App) BatchHandler(w http.ResponseWriter, r *http.Request) {
 
 // PutHandler receives data from the client and puts it into the content store
 func (a *App) PutHandler(w http.ResponseWriter, r *http.Request) {
-	rv := unpack(r)
+	rv := unpack(r, a.config)
 	meta, err := a.metaStore.Get(rv)
 	if err != nil {
 		writeStatus(w, r, 404)
@@ -579,7 +581,7 @@ func (a *App) Represent(rv *RequestVars, meta *MetaObject, download, upload, use
 
 func (a *App) requireAuth(h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if !Config.IsPublic() {
+		if !a.config.IsPublic() {
 			user, password, _ := r.BasicAuth()
 			if user, ret := a.metaStore.Authenticate(user, password); !ret {
 				w.Header().Set("WWW-Authenticate", "Basic realm=git-lfs-server")
@@ -615,9 +617,10 @@ func randomLockId() string {
 	return fmt.Sprintf("%x", id[:])
 }
 
-func unpack(r *http.Request) *RequestVars {
+func unpack(r *http.Request, config *Configuration) *RequestVars {
 	vars := mux.Vars(r)
 	rv := &RequestVars{
+		config:        config,
 		User:          vars["user"],
 		Repo:          vars["repo"],
 		Oid:           vars["oid"],

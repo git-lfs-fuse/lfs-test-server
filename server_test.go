@@ -537,7 +537,7 @@ func TestMain(m *testing.M) {
 	os.Remove("lfs-test.db")
 
 	var err error
-	testMetaStore, err = NewMetaStore("lfs-test.db")
+	testMetaStore, err = NewMetaStore(Config, "lfs-test.db")
 	if err != nil {
 		fmt.Printf("Error creating meta store: %s", err)
 		os.Exit(1)
@@ -559,7 +559,7 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	app := NewApp(testContentStore, testMetaStore)
+	app := NewApp(Config, testContentStore, testMetaStore)
 	lfsServer = httptest.NewServer(app)
 
 	logger = NewKVLogger(ioutil.Discard)

@@ -65,7 +65,7 @@ func wrapHttps(l net.Listener, cert, key string) (net.Listener, error) {
 
 func maincmd() {
 	// cmdline interface: cmd oid -> returns object from db or error
-	metaStore, err := NewMetaStore(Config.MetaDB)
+	metaStore, err := NewMetaStore(Config, Config.MetaDB)
 	if err != nil {
 		logger.Fatal(kv{"fn": "maincmd", "err": "Could not open the meta store: " + err.Error()})
 	}
@@ -105,7 +105,7 @@ func main() {
 		}
 	}
 
-	metaStore, err := NewMetaStore(Config.MetaDB)
+	metaStore, err := NewMetaStore(Config, Config.MetaDB)
 	if err != nil {
 		logger.Fatal(kv{"fn": "main", "err": "Could not open the meta store: " + err.Error()})
 	}
@@ -129,7 +129,7 @@ func main() {
 
 	logger.Log(kv{"fn": "main", "msg": "listening", "pid": os.Getpid(), "addr": Config.Listen, "version": version})
 
-	app := NewApp(contentStore, metaStore)
+	app := NewApp(Config, contentStore, metaStore)
 	if Config.IsUsingTus() {
 		tusServer.Start()
 	}
