@@ -129,7 +129,7 @@ func main() {
 
 	logger.Log(kv{"fn": "main", "msg": "listening", "pid": os.Getpid(), "addr": Config.Listen, "version": version})
 
-	app := NewApp(contentStore, metaStore)
+	app := NewApp(Config, contentStore, metaStore)
 	if Config.IsUsingTus() {
 		tusServer.Start()
 	}
