@@ -162,6 +162,7 @@ type App struct {
 	router       *mux.Router
 	contentStore *ContentStore
 	metaStore    *MetaStore
+	Middleware   mux.MiddlewareFunc
 }
 
 // NewApp creates a new App using the ContentStore and MetaStore provided
@@ -208,7 +209,10 @@ func (a *App) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err == nil {
 		context.Set(r, "RequestID", fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:]))
 	}
-
+	if a.Middleware != nil {
+		a.Middleware(a.router).ServeHTTP(w, r)
+		return
+	}
 	a.router.ServeHTTP(w, r)
 }
 
